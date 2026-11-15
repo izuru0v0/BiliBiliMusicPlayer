@@ -37,6 +37,8 @@ class DesktopApp {
  private val storage=File(System.getProperty("bilimusic.data",System.getProperty("user.home")+"/.bilimusic"),"library.properties")
  private var tracks=listOf<Track>()
  private var names = mutableListOf<String>()
+ private var english = false
+ private fun tr(text: String) = dev.bilimusic.core.musicLabel(text, english)
  private var themeName = themes.keys.first()
  @Volatile private var cacheDirectory = File(storage.parentFile, "cache")
  private val thumbnailExecutor = java.util.concurrent.Executors.newFixedThreadPool(3) { task ->
@@ -95,7 +97,7 @@ class DesktopApp {
  private val nowPlaying = ScrollingTitle("尚未播放音乐")
  private val nowDetail = JLabel(" ")
  private val browsePages = setOf("搜索结果", "UP主", "UP主详情", "合集详情", "我的合集", "音乐库", "最近播放")
- private val browser = PagedBrowser(::button, ::requestError)
+ private val browser = PagedBrowser(::button, ::requestError, ::tr)
  private val recommendationGrid = JPanel(GridLayout(0, 2, 10, 8)).apply { isOpaque = false }
  private val recommendationMessage = JLabel("", SwingConstants.CENTER)
  private var homeRecommendations = emptyList<BiliVideo>()
@@ -138,6 +140,7 @@ class DesktopApp {
     } finally { graphics.dispose() }
    }
   }
+  frame.title = tr("B站音乐播放器")
   frame.isUndecorated = true
   frame.defaultCloseOperation=JFrame.DISPOSE_ON_CLOSE
   frame.addWindowListener(object : java.awt.event.WindowAdapter() {
@@ -155,7 +158,7 @@ class DesktopApp {
   })
   root.background=bg;root.border=BorderFactory.createEmptyBorder(24,24,24,24)
   root.layout=BorderLayout(28,20)
-  fun label(text:String,size:Int=14,color:Color=Color(232,231,226),bold:Boolean=false)=JLabel(text).apply{font=Font(desktopFont,if(bold) Font.BOLD else Font.PLAIN,size);foreground=color;alignmentX=0f}
+  fun label(text:String,size:Int=14,color:Color=Color(232,231,226),bold:Boolean=false)=JLabel(tr(text)).apply{font=Font(desktopFont,if(bold) Font.BOLD else Font.PLAIN,size);foreground=color;alignmentX=0f}
   fun clearPanel(layout:LayoutManager)=JPanel(layout).apply{isOpaque=false}
   fun stack()=clearPanel(GridLayout(0,1,0,8))
 
@@ -323,8 +326,8 @@ class DesktopApp {
     preferredSize = Dimension(42, 44)
     font = font.deriveFont(22f)
     border = BorderFactory.createEmptyBorder()
-    toolTipText = description
-    accessibleContext.accessibleName = description
+    toolTipText = tr(description)
+    accessibleContext.accessibleName = tr(description)
    }
   windowTools.add(windowControl("−", "最小化") { frame.extendedState = frame.extendedState or Frame.ICONIFIED })
   windowTools.add(windowControl("□", "最大化或还原") { toggleMaximized() })
@@ -346,7 +349,7 @@ class DesktopApp {
    minimumSize = Dimension(1, 192)
    maximumSize = Dimension(Int.MAX_VALUE, 192)
    preferredSize = Dimension(850, 192)
-   greetingLabel.text = greeting
+   greetingLabel.text = if (english && greeting == defaultGreeting) "What would you like to hear today?" else greeting
    greetingLabel.font = Font(desktopFont, Font.BOLD, 27)
    greetingLabel.foreground = accent
    greetingLabel.putClientProperty("html.disable", true)
@@ -415,6 +418,7 @@ class DesktopApp {
      }, BorderLayout.EAST)
     }
     add(entry("主题切换", "settings", ::chooseTheme))
+    add(entry("语言", "settings", ::chooseLanguage))
    }, BorderLayout.NORTH)
   }, BorderLayout.CENTER)
   pages.add(settings, "settings")
@@ -449,6 +453,7 @@ class DesktopApp {
   root.add(center, BorderLayout.CENTER)
   val bottom=RoundedPanel(22);bottom.background=Color(28,28,29);bottom.layout=BorderLayout(22,0);bottom.border=BorderFactory.createEmptyBorder(18,22,18,22);bottom.preferredSize=Dimension(1200,106)
   val now = stack()
+  nowPlaying.text = tr("尚未播放音乐")
   nowPlaying.font = Font(desktopFont, Font.BOLD, 15)
   nowPlaying.foreground = Color(238, 235, 223)
   nowPlaying.putClientProperty("html.disable", true)
@@ -585,7 +590,7 @@ class DesktopApp {
   }.execute()
  }
  fun show(){frame.isVisible=true}
- private fun button(s:String,action:()->Unit):JButton=HoverButton(s).apply{background=if(s=="播放选中") accent else panelColor;foreground=if(background==accent) bg else Color(208,205,195);font=Font(desktopFont,Font.BOLD,15);addActionListener{action()}}
+ private fun button(s:String,action:()->Unit):JButton=HoverButton(tr(s)).apply{background=if(s=="播放选中") accent else panelColor;foreground=if(background==accent) bg else Color(208,205,195);font=Font(desktopFont,Font.BOLD,15);addActionListener{action()}}
  private fun styleInputs(c:Container){for(child in c.components){when(child){is SearchField->Unit;is JTextField->{child.background=Color(37,37,38);child.foreground=Color(235,232,222);child.caretColor=accent;child.border=BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0,0,1,0,accent),BorderFactory.createEmptyBorder(5,10,5,10))};is JCheckBox->{child.isOpaque=false;child.foreground=Color(210,207,185)};is JComboBox<*>->{child.background=Color(37,37,38);child.foreground=Color(235,232,222)};is JLabel->{if(child.foreground.red<90 && child.foreground.green<90)child.foreground=Color(190,187,165)}};if(child is Container)styleInputs(child)}}
  private fun toggleMaximized() {
   val maximized = frame.extendedState and Frame.MAXIMIZED_BOTH == Frame.MAXIMIZED_BOTH
@@ -637,7 +642,7 @@ class DesktopApp {
     }
     val header = JPanel(BorderLayout()).apply {
      isOpaque = false
-     add(JLabel(title).apply {
+     add(JLabel(tr(title)).apply {
       font = Font(desktopFont, Font.BOLD, 15)
       foreground = Color(242, 239, 225)
      }, BorderLayout.WEST)
@@ -1174,8 +1179,8 @@ class DesktopApp {
 
  private fun compactButton(symbol: String, description: String, action: () -> Unit) =
   button(symbol, action).apply {
-   toolTipText = description
-   accessibleContext.accessibleName = description
+   toolTipText = tr(description)
+   accessibleContext.accessibleName = tr(description)
    preferredSize = Dimension(42, 36)
    border = BorderFactory.createEmptyBorder()
   }
@@ -1377,7 +1382,7 @@ class DesktopApp {
    border = BorderFactory.createEmptyBorder(20, 22, 16, 22)
    add(JPanel(BorderLayout(12, 0)).apply {
     isOpaque = false
-    add(JLabel(title).apply {
+    add(JLabel(tr(title)).apply {
      font = Font(desktopFont, Font.BOLD, 19)
      foreground = Color(242, 240, 232)
     }, BorderLayout.CENTER)
@@ -1402,7 +1407,7 @@ class DesktopApp {
  }
 
  private fun showPlaylistNotice(title: String, text: String) {
-  showPlayerDialog(title, JLabel(text).apply { foreground = Color(218, 214, 196) }) { dialog ->
+  showPlayerDialog(title, JLabel(tr(text)).apply { foreground = Color(218, 214, 196) }) { dialog ->
    listOf(button("关闭") { dialog.dispose() })
   }
  }
@@ -1881,7 +1886,7 @@ class DesktopApp {
    border = BorderFactory.createEmptyBorder(5, 8, 8, 4)
    add(JPanel(GridLayout(2, 1, 0, 4)).apply {
     isOpaque = false
-    add(JLabel(title).apply { font = Font(desktopFont, Font.BOLD, 17); foreground = Color(242, 239, 225) })
+    add(JLabel(tr(title)).apply { font = Font(desktopFont, Font.BOLD, 17); foreground = Color(242, 239, 225) })
     add(JLabel("$count 项 · ${modeName(mode)}").apply { foreground = Color(180, 176, 161) })
    }, BorderLayout.CENTER)
    add(JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0)).apply {
@@ -2032,6 +2037,25 @@ class DesktopApp {
   coverRequest = worker
   worker.execute()
  }
+ private fun chooseLanguage() {
+  showPlayerDialog("语言", JLabel(if (english) "Playback restarts when the language changes." else "切换语言会重新打开窗口并停止当前播放。"), closable = true) { dialog ->
+   listOf("简体中文" to false, "English" to true).map { (name, value) ->
+    button(name) {
+     dialog.dispose()
+     if (english == value) return@button
+     english = value
+     runCatching { save() }.onSuccess {
+      frame.dispose()
+      DesktopApp().show()
+     }.onFailure {
+      english = !value
+      showPlaylistNotice("语言", if (english) "Could not save language preference." else "无法保存语言设置。")
+     }
+    }
+   }
+  }
+ }
+
  private fun chooseTheme() {
   var selected: String? = null
   showPlayerDialog("主题切换", JLabel("当前主题 · $themeName"), closable = true) { dialog ->
@@ -2122,6 +2146,7 @@ class DesktopApp {
   data.setProperty("searchHistory", searchHistory.joinToString("\n"))
   data.setProperty("home.greeting", greeting)
   data.setProperty("theme", themeName)
+  data.setProperty("language", if (english) "en" else "zh")
   data.setProperty("cache.directory", cacheDirectory.absolutePath)
   followGroups.stringPropertyNames().forEach { data.setProperty("followGroup.$it", followGroups.getProperty(it)) }
   storage.parentFile.mkdirs()
@@ -2137,6 +2162,7 @@ class DesktopApp {
   runCatching {
    val data = Properties()
    storage.inputStream().use { data.load(it) }
+   english = data.getProperty("language") == "en"
    themeName = when (val stored = data.getProperty("theme")) {
     "薄荷绿" -> "墨绿色"
     "冰川蓝" -> "墨蓝色"

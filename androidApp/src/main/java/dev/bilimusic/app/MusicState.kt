@@ -22,6 +22,14 @@ internal class MusicState(private val context: Context, private val scope: Corou
 
     var screen by mutableStateOf("首页")
         private set
+    var english by mutableStateOf(preferences.getBoolean("english", false))
+        private set
+
+    fun changeLanguage(value: Boolean) {
+        english = value
+        preferences.edit().putBoolean("english", value).apply()
+    }
+
     var theme by mutableStateOf(preferences.getInt("theme", 0).coerceIn(0, 2))
         private set
     var account by mutableStateOf<BiliAccount?>(null)

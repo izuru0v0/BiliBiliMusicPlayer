@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,22 @@ private val palettes = listOf(
 private val tabs = listOf("首页", "歌单", "UP主", "最近")
 private val modes = listOf("顺序", "单曲循环", "随机")
 
+private val LocalEnglish = compositionLocalOf { false }
+
+@Composable
+private fun Text(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    style: androidx.compose.ui.text.TextStyle = LocalTextStyle.current,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+    textAlign: TextAlign? = null,
+) {
+    MaterialText(dev.bilimusic.core.musicLabel(text, LocalEnglish.current), modifier,
+        color = color, style = style, maxLines = maxLines, overflow = overflow, textAlign = textAlign)
+}
+
 @Composable
 private fun MusicApp() {
     val context = LocalContext.current
@@ -80,13 +97,13 @@ private fun MusicApp() {
 
     var settingsOrigin by remember { mutableStateOf("首页") }
     fun backFromSettings() {
-        if (state.screen == "主题切换") state.navigate("设置")
+        if (state.screen != "设置") state.navigate("设置")
         else state.navigate(settingsOrigin)
     }
     LaunchedEffect(state) { state.start() }
     DisposableEffect(state) { onDispose { state.dispose() } }
     BackHandler(state.screen != "首页") {
-        if (state.screen in listOf("设置", "主题切换")) {
+        if (state.screen in listOf("设置", "主题切换", "语言")) {
             backFromSettings()
             return@BackHandler
         }
@@ -99,6 +116,7 @@ private fun MusicApp() {
         })
     }
 
+    CompositionLocalProvider(LocalEnglish provides state.english) {
     MaterialTheme(colorScheme = darkColorScheme(
         primary = palette.accent, onPrimary = palette.bg, background = palette.bg,
         surface = palette.surface, surfaceContainer = palette.surface,
@@ -109,7 +127,7 @@ private fun MusicApp() {
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val settingsPage = state.screen in listOf("设置", "主题切换")
+                    val settingsPage = state.screen in listOf("设置", "主题切换", "语言")
                     if (settingsPage) TextButton(onClick = ::backFromSettings) { Text("‹ 返回") }
                     Text(if (settingsPage) state.screen else "B站音乐播放器", Modifier.weight(1f),
                         style = MaterialTheme.typography.titleLarge)
@@ -129,7 +147,7 @@ private fun MusicApp() {
                     manage = { managedFolder = it; picker = "管理收藏夹" },
                     confirm = ::confirm)
                 PlayerBar(state) { picker = it }
-                if (state.screen !in listOf("设置", "主题切换")) NavigationBar(containerColor = palette.surface) {
+                if (state.screen !in listOf("设置", "主题切换", "语言")) NavigationBar(containerColor = palette.surface) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = state.screen == tab || tab == "首页" && state.screen in listOf("搜索", "搜索结果") ||
@@ -241,6 +259,7 @@ private fun MusicApp() {
         }
     }
 }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -283,7 +302,7 @@ private fun PlayerContent(
                 item {
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("今天想要听点什么呢老大♡(｡•̀ᴗ-)✧",
+                            Text(if (state.english) "What would you like to hear today?" else "今天想要听点什么呢老大♡(｡•̀ᴗ-)✧",
                                 color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge)
                             Spacer(Modifier.height(16.dp))
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -403,12 +422,28 @@ private fun PlayerContent(
                 }
             }
             "登录" -> item { QrLogin(state) }
-            "设置" -> item {
+            "设置" -> {
+                item {
                 Card(Modifier.fillMaxWidth().clickable { state.navigate("主题切换") }) {
                     Row(Modifier.padding(16.dp)) {
                         Text("主题切换", Modifier.weight(1f))
                         Text("›")
                     }
+                }
+            }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { state.navigate("语言") }) {
+                        Row(Modifier.padding(16.dp)) {
+                            Text("语言", Modifier.weight(1f))
+                            Text("›")
+                        }
+                    }
+                }
+            }
+            "语言" -> item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(!state.english, { state.changeLanguage(false) }, { Text("简体中文") })
+                    FilterChip(state.english, { state.changeLanguage(true) }, { Text("English") })
                 }
             }
             "主题切换" -> item {

@@ -152,7 +152,8 @@ internal class BrowseRow : JPanel(BorderLayout(16, 0)) {
 
 internal class PagedBrowser(
  private val makeButton: (String, () -> Unit) -> JButton,
- private val errorText: (Throwable) -> String
+ private val errorText: (Throwable) -> String,
+ private val tr: (String) -> String
 ) : JPanel(BorderLayout(0, 14)) {
  private val heading = JLabel()
  private val detail = JLabel()
@@ -246,7 +247,7 @@ internal class PagedBrowser(
   renderer: (T) -> JComponent
  ) {
   stop()
-  heading.text = title
+  heading.text = tr(title)
   heading.isVisible = title.isNotBlank()
   heading.icon = null
   backRow.removeAll()
@@ -294,7 +295,7 @@ internal class PagedBrowser(
  fun setActionState(id: String, text: String, enabled: Boolean) {
   for (button in (tabs.components.asList() + rightActions.components.asList()).filterIsInstance<JButton>()) {
    if (button.getClientProperty("browse.action") != id) continue
-   button.text = text
+   button.text = tr(text)
    button.isEnabled = enabled
   }
  }
@@ -347,7 +348,7 @@ internal class PagedBrowser(
      }
      page++
      hasMore = batch.hasMore && batch.items.isNotEmpty()
-     showContent(if (items.isEmpty()) "暂无结果" else null)
+     showContent(if (items.isEmpty()) tr("暂无结果") else null)
      detail.text = profileSummary
      detail.isVisible = detail.text.isNotBlank()
      footer.isVisible = false
@@ -356,7 +357,7 @@ internal class PagedBrowser(
      rows.repaint()
     }.onFailure {
      showContent(errorText(it))
-     footer.text = "重试加载"
+     footer.text = tr("重试加载")
      footer.isVisible = true
      footer.isEnabled = true
     }
